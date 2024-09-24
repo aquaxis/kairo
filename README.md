@@ -1,2 +1,1 @@
-# peak
-PEAK(Process Engine Architecture for RISC-V Kernels)
+# PEAK(Process Engine Architecture for RISC-V Kernels)
