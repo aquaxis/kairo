@@ -1,0 +1,3 @@
+[submodule "rtl/rv_debug"]
+	path = rtl/rv_debug
+	url = https://github.com/aquaxis/rv_debug.git
