@@ -1,3 +1,6 @@
 [submodule "rtl/rv_debug"]
 	path = rtl/rv_debug
 	url = https://github.com/aquaxis/rv_debug.git
+[submodule "rtl/aq_axis_fifo"]
+	path = rtl/aq_axis_fifo
+	url = https://github.com/aquaxis/aq_axis_fifo.git
