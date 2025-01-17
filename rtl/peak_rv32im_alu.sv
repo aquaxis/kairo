@@ -10,18 +10,24 @@ module peak_rv32im_alu (
     input  wire        INST_XOR,
     input  wire        INST_OR,
     input  wire        INST_AND,
+    input  wire        INST_BR,
     input  wire        INST_LTS,
     input  wire        INST_LTU,
     input  wire        INST_EQ,
     input  wire        INST_BR_NOT,
+    input  wire        INST_JAL,
     input  wire [31:0] RS1,
     input  wire [31:0] RS2,
     input  wire [31:0] IMM,
+    input  wire [31:0] PC,
     output wire        RSLT_VALID,
-    output wire [31:0] RSLT
+    output wire [31:0] RSLT,
+    output wire [31:0] RSLT_A,
+    output wire        RSLT_B
 );
 
-  wire [31:0] reg_op2;
+  wire [31:0] reg_op1, reg_op2;
+  assign reg_op1 = (INST_BR | INST_JAL) ? PC : RS1;
   assign reg_op2 = (INST_IMM) ? IMM : RS2;
 
   wire [31:0] alu_add, alu_sub, alu_shl, alu_shr, alu_shra, alu_xor, alu_or, alu_and;
@@ -38,6 +44,15 @@ module peak_rv32im_alu (
   assign alu_eq = (RS1 == reg_op2);
   assign alu_lts = ($signed(RS1) < $signed(reg_op2));
   assign alu_ltu = (RS1 < reg_op2);
+
+  assign RSLT_A = alu_add;
+  assign RSLT_B = ((INST_EQ & !INST_BR_NOT)?alu_eq:1'd0) |
+                  ((INST_LTS & !INST_BR_NOT)?alu_lts:1'd0) |
+                  ((INST_LTU & !INST_BR_NOT)?alu_ltu:1'd0) |
+                  ((INST_EQ & INST_BR_NOT)?!alu_eq:1'd0) |
+                  ((INST_LTS & INST_BR_NOT)?!alu_lts:1'd0) |
+                  ((INST_LTU & INST_BR_NOT)?!alu_ltu:1'd0) |
+                  1'd0;
 
   assign RSLT = ((INST_ADD)?alu_add:32'd0) | 
                 ((INST_SUB)?alu_sub:32'd0) |
