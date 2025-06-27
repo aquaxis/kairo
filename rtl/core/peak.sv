@@ -145,6 +145,7 @@ module peak #(
     end
   end
 
+  reg  [ 0:0] bootcnt;
   wire        wb_pc_we;
   wire [31:0] wb_pc;
   reg  [ 0:0] tasknum;
@@ -153,9 +154,14 @@ module peak #(
     if (!RST_N) begin
       tasknum <= 0;
       pc <= START_ADDR;
+      bootcnt <= 0;
     end else begin
+      if (bootcnt != 1'b1) bootcnt <= bootcnt + 1;
       tasknum <= tasknum + 1;
-      if (wb_pc_we) pc <= wb_pc;
+      case (bootcnt)
+        1'b0: pc <= 32'h00001000;
+        default: if (wb_pc_we) pc <= wb_pc;
+      endcase
     end
   end
 
@@ -360,6 +366,8 @@ module peak #(
       .RD  (ex_div_rd)
   );
 */
+  assign ex_mul_wait = 0;
+  assign ex_div_wait = 0;
 
   assign ex_wait = ex_mul_wait | ex_div_wait | (D_MEM_VALID & ~D_MEM_READY);
 
