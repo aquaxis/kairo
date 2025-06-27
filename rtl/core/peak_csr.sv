@@ -1,6 +1,6 @@
 `default_nettype none
 
-module peak_rv32im_csr (
+module peak_csr (
     input  wire        RST_N,
     input  wire        CLK,
     input  wire [11:0] CSR_ADDR,

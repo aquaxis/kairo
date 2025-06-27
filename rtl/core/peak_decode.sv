@@ -1,6 +1,6 @@
 `default_nettype none
 
-module peak_rv32im_decode (
+module peak_decode (
     input wire [31:0] INST_CODE,  // instructin code
     output wire [4:0] RD_NUM,  // regsiter number
     output wire [4:0] RS1_NUM,

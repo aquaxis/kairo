@@ -1,6 +1,6 @@
 `default_nettype none
 
-module peak_rv32im_alu (
+module peak_alu (
     input  wire        INST_IMM,
     input  wire        INST_ADD,
     input  wire        INST_SUB,

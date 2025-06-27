@@ -1,9 +1,9 @@
 `default_nettype none
 
-module peak_rv32im_reg (
+module peak_reg (
     input  wire        RST_N,
     input  wire        CLK,
-    input  wire [ 1:0] TASKNUM,
+    input  wire [ 0:0] TASKNUM,
     input  wire [ 4:0] WADDR,
     input  wire        WE,
     input  wire [31:0] WDATA,
@@ -21,19 +21,19 @@ module peak_rv32im_reg (
   localparam AR_REGADDR = 8'h10;
 
   wire        w_ena;
-  wire [ 6:0] w_addr;
+  wire [ 5:0] w_addr;
   wire [31:0] w_data;
-  wire [6:0] r1_addr, r2_addr;
+  wire [5:0] r1_addr, r2_addr;
   reg [31:0] r1_data, r2_data;
   reg r1_zero, r2_zero;
 
-  reg [31:0] mem_rs1[0:127];
-  reg [31:0] mem_rs2[0:127];
+  reg [31:0] mem_rs1[0:63];
+  reg [31:0] mem_rs2[0:63];
 
   assign w_ena   = (AR_EN & AR_WR) | (!AR_EN & WE);
-  assign w_addr  = (AR_EN & (AR_AD[15:8] == AR_REGADDR)) ? {2'd0, AR_AD[4:0]} : {TASKNUM, WADDR};
+  assign w_addr  = (AR_EN & (AR_AD[15:8] == AR_REGADDR)) ? {1'd0, AR_AD[4:0]} : {TASKNUM, WADDR};
   assign w_data  = (AR_EN & (AR_AD[15:8] == AR_REGADDR)) ? AR_DI : WDATA;
-  assign r1_addr = (AR_EN & (AR_AD[15:8] == AR_REGADDR)) ? {2'd0, AR_AD[4:0]} : {TASKNUM, RS1ADDR};
+  assign r1_addr = (AR_EN & (AR_AD[15:8] == AR_REGADDR)) ? {1'd0, AR_AD[4:0]} : {TASKNUM, RS1ADDR};
   assign r2_addr = {TASKNUM, RS2ADDR};
 
   always @(posedge CLK) begin
