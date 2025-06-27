@@ -3,22 +3,21 @@
 module peak_reg (
     input  wire        RST_N,
     input  wire        CLK,
-    input  wire [ 0:0] TASKNUM,
+    input  wire [ 0:0] WTASKNUM,
     input  wire [ 4:0] WADDR,
     input  wire        WE,
     input  wire [31:0] WDATA,
+    input  wire [ 0:0] RTASKNUM,
     input  wire [ 4:0] RS1ADDR,
     input  wire [ 4:0] RS2ADDR,
     output wire [31:0] RS1,
     output wire [31:0] RS2,
     input  wire        AR_EN,
     input  wire        AR_WR,
-    input  wire [15:0] AR_AD,
+    input  wire [ 4:0] AR_AD,
     input  wire [31:0] AR_DI,
     output wire [31:0] AR_DO
 );
-
-  localparam AR_REGADDR = 8'h10;
 
   wire        w_ena;
   wire [ 5:0] w_addr;
@@ -31,10 +30,10 @@ module peak_reg (
   reg [31:0] mem_rs2[0:63];
 
   assign w_ena   = (AR_EN & AR_WR) | (!AR_EN & WE);
-  assign w_addr  = (AR_EN & (AR_AD[15:8] == AR_REGADDR)) ? {1'd0, AR_AD[4:0]} : {TASKNUM, WADDR};
-  assign w_data  = (AR_EN & (AR_AD[15:8] == AR_REGADDR)) ? AR_DI : WDATA;
-  assign r1_addr = (AR_EN & (AR_AD[15:8] == AR_REGADDR)) ? {1'd0, AR_AD[4:0]} : {TASKNUM, RS1ADDR};
-  assign r2_addr = {TASKNUM, RS2ADDR};
+  assign w_addr  = (AR_EN) ? {1'd0, AR_AD[4:0]} : {WTASKNUM, WADDR};
+  assign w_data  = (AR_EN) ? AR_DI : WDATA;
+  assign r1_addr = (AR_EN) ? {1'd0, AR_AD[4:0]} : {RTASKNUM, RS1ADDR};
+  assign r2_addr = {RTASKNUM, RS2ADDR};
 
   always @(posedge CLK) begin
     r1_zero <= (r1_addr == 0);
