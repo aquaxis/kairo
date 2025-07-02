@@ -1,6 +1,6 @@
 `default_nettype none
 
-module peak_decode (
+module kairo_decode (
     // Code
     input wire [31:0] INST_CODE,
     // Register Number

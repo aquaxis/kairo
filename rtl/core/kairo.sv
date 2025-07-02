@@ -1,6 +1,6 @@
 `default_nettype none
 
-module peak #(
+module kairo #(
     parameter START_ADDR = 32'h0000_0000
 ) (
     //System
@@ -20,7 +20,7 @@ module peak #(
     output wire [31:0] D_MEM_WDATA,
     input  wire [31:0] D_MEM_RDATA,
     input  wire        D_MEM_EXCPT,
-    // Intgerrupt
+    // Interrupt
     input  wire        EXT_INTERRUPT,
     input  wire        SOFT_INTERRUPT,
     input  wire        TIMER_EXPIRED,
@@ -69,7 +69,7 @@ module peak #(
                 id_inst_div, id_inst_divu,
                 id_inst_rem, id_inst_remu;
 
-  wire id_ill_inst, w_id_ill_inst;
+  wire id_ill_inst, id_ill_inst_raw;
 
   //////////////////////////////////////////////////////////////////////
   // CPU State
@@ -79,6 +79,10 @@ module peak #(
   localparam S_EXEC = 2'd1;
   localparam S_HALT = 2'd2;
   localparam S_RESUME = 2'd3;
+
+  // Boot parameters
+  localparam BOOT_ADDR = 32'h00008000;
+  localparam BOOT_CYCLES = 1'd1;
 
   wire ex_wait, ex_cansel;
   wire [31:0] exception_pc;
@@ -159,7 +163,7 @@ module peak #(
       if (bootcnt != 1'b1) bootcnt <= bootcnt + 1;
       tasknum <= tasknum + 1;
       case (bootcnt)
-        1'b0: pc <= 32'h00001000;
+        1'b0: pc <= BOOT_ADDR;
         default: if (wb_pc_we) pc <= wb_pc;
       endcase
     end
@@ -191,7 +195,7 @@ module peak #(
   //////////////////////////////////////////////////////////////////////
   // ID:Instruction Decode
   //////////////////////////////////////////////////////////////////////
-  peak_decode u_peak_decode (
+  kairo_decode u_kairo_decode (
       // インストラクションコード
       .INST_CODE(fetch_data),
       .RS1_NUM  (id_rs1_num),
@@ -261,10 +265,10 @@ module peak #(
       .INST_REM   (id_inst_rem),
       .INST_REMU  (id_inst_remu),
 
-      .ILL_INST(w_id_ill_inst)
+      .ILL_INST(id_ill_inst_raw)
   );
 
-  assign id_ill_inst = w_id_ill_inst & cpu_exec;
+  assign id_ill_inst = id_ill_inst_raw & cpu_exec;
 
   //////////////////////////////////////////////////////////////////////
   // EX:Excute
@@ -280,7 +284,10 @@ module peak #(
   wire        ex_div_ready;
   wire [31:0] ex_div_rd;
 
-  peak_alu u_peak_alu (
+  kairo_alu u_kairo_alu (
+      .RST_N     (RST_N),
+      .CLK       (CLK),
+      //
       .INST_ADDI (id_inst_addi),
       .INST_SLTI (id_inst_slti),
       .INST_SLTIU(id_inst_sltiu),
@@ -300,40 +307,40 @@ module peak #(
       .INST_SRA  (id_inst_sra),
       .INST_OR   (id_inst_or),
       .INST_AND  (id_inst_and),
-
-      .INST_BEQ (id_inst_beq),
-      .INST_BNE (id_inst_bne),
-      .INST_BLT (id_inst_blt),
-      .INST_BGE (id_inst_bge),
-      .INST_BLTU(id_inst_bltu),
-      .INST_BGEU(id_inst_bgeu),
-
-      .INST_LB (id_inst_lb),
-      .INST_LH (id_inst_lh),
-      .INST_LW (id_inst_lw),
-      .INST_LBU(id_inst_lbu),
-      .INST_LHU(id_inst_lhu),
-      .INST_SB (id_inst_sb),
-      .INST_SH (id_inst_sh),
-      .INST_SW (id_inst_sw),
-
-      .INST_JAL (id_inst_jal),
-      .INST_JALR(id_inst_jalr),
-
+      //
+      .INST_BEQ  (id_inst_beq),
+      .INST_BNE  (id_inst_bne),
+      .INST_BLT  (id_inst_blt),
+      .INST_BGE  (id_inst_bge),
+      .INST_BLTU (id_inst_bltu),
+      .INST_BGEU (id_inst_bgeu),
+      //
+      .INST_LB   (id_inst_lb),
+      .INST_LH   (id_inst_lh),
+      .INST_LW   (id_inst_lw),
+      .INST_LBU  (id_inst_lbu),
+      .INST_LHU  (id_inst_lhu),
+      .INST_SB   (id_inst_sb),
+      .INST_SH   (id_inst_sh),
+      .INST_SW   (id_inst_sw),
+      //
+      .INST_JAL  (id_inst_jal),
+      .INST_JALR (id_inst_jalr),
+      //
       .INST_AUIPC(id_inst_auipc),
-
-      .RS1(id_rs1),
-      .RS2(id_rs2),
-      .IMM(id_imm),
-      .PC (current_pc),
-
+      //
+      .RS1       (id_rs1),
+      .RS2       (id_rs2),
+      .IMM       (id_imm),
+      .PC        (current_pc),
+      //
       .RSLT_VALID(is_ex_alu_rslt),
       .RSLT      (ex_alu_rslt),
       .RSLT_A    (ex_alu_rslt_a),
       .RSLT_B    (ex_alu_rslt_b)
   );
   /*
-  peak_mul u_peak_mul (
+  kairo_mul u_kairo_mul (
       // System
       .RST_N      (RST_N),
       .CLK        (CLK),
@@ -350,7 +357,7 @@ module peak #(
       .RD         (ex_mul_rd)
   );
 
-  peak_div u_peak_div (
+  kairo_div u_kairo_div (
       .RST_N(RST_N),
       .CLK  (CLK),
 
@@ -391,7 +398,7 @@ module peak #(
   always @(posedge CLK) begin
     if (!RST_N) begin
       ex_csr_we <= 1'b0;
-      ex_pc_inc <= 32'h00001000;
+      ex_pc_inc <= BOOT_ADDR;
     end else begin
       ex_tasknum <= tasknum;
       ex_pc_inc <= pc + 4;
@@ -557,19 +564,19 @@ module peak #(
   assign sw_interrupt_pc = current_pc;
 
   assign wb_pc_we = (cpu_exec & !ex_wait) | (detect_exception);
-  assign wb_pc            = (detect_exception)?handler_pc:
-                            (cpu_exec & detect_ebreak)?current_pc:
-                            (cpu_exec & ex_inst_mret)?epc:
-                            (cpu_exec & detect_branch)?ex_alu_rslt_a:
-                            (~(detect_exception | (cpu_exec & (detect_ebreak | ex_inst_mret | detect_branch | ex_inst_jalr))))?ex_pc_inc:
-                            32'd0;
+  assign wb_pc    = (detect_exception)?handler_pc:
+                    (cpu_exec & detect_ebreak)?current_pc:
+                    (cpu_exec & ex_inst_mret)?epc:
+                    (cpu_exec & detect_branch)?ex_alu_rslt_a:
+                    (~(detect_exception | (cpu_exec & (detect_ebreak | ex_inst_mret | detect_branch | ex_inst_jalr))))?ex_pc_inc:
+                     32'd0;
   assign ex_cansel = (detect_branch | ex_inst_jal | ex_inst_jalr | ex_inst_mret | detect_exception);
 
   //////////////////////////////////////////////////////////////////////
   // Register
   //////////////////////////////////////////////////////////////////////
   wire [31:0] AR_DO_reg;
-  peak_reg u_peak_reg (
+  kairo_reg u_kairo_reg (
       // System
       .RST_N   (RST_N),
       .CLK     (CLK),
@@ -596,7 +603,7 @@ module peak #(
   // CSR
   //////////////////////////////////////////////////////////////////////
   wire [31:0] AR_DO_csr;
-  peak_csr u_peak_csr (
+  kairo_csr u_kairo_csr (
       //
       .RST_N            (RST_N),
       .CLK              (CLK),

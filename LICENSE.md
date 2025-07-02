@@ -1,7 +1,7 @@
 Software License Agreement
 ==========================
 
-**PEAK** (https://github.com/aquaxis/peak)<br>
+**PEAK** (https://github.com/aquaxis/kairo)<br>
 Copyright (c) 2025, [AQUAXIS TECHNOLOGY & Hidemi Ishihara](https://aquaxis.com/) All rights reserved.
 
 Licensed under a dual-license model, this software is available under:

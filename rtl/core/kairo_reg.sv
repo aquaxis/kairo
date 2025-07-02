@@ -1,6 +1,6 @@
 `default_nettype none
 
-module peak_reg (
+module kairo_reg (
     input  wire        RST_N,
     input  wire        CLK,
     input  wire [ 0:0] WTASKNUM,

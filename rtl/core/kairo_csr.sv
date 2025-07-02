@@ -1,6 +1,6 @@
 `default_nettype none
 
-module peak_csr (
+module kairo_csr (
     input  wire        RST_N,
     input  wire        CLK,
     input  wire [11:0] CSR_ADDR,
