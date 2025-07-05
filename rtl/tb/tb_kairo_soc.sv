@@ -8,10 +8,10 @@ module tb_kairo_soc;
   reg         INTERRUPT;
 
   // GPIO signals
-  reg  [31:0] GPIO0_I;
+  wire [31:0] GPIO0_I;
   wire [31:0] GPIO0_O;
   wire [31:0] GPIO0_OE;
-  reg  [31:0] GPIO1_I;
+  wire [31:0] GPIO1_I;
   wire [31:0] GPIO1_O;
   wire [31:0] GPIO1_OE;
 
@@ -56,24 +56,10 @@ module tb_kairo_soc;
       .TDI      (TDI),
       .TDO      (TDO)
   );
-  /*
-  // Test memory initialization
-  initial begin
-    // Load test program into instruction memory
-    mem_file = "/home/hidemi/kairo/software/imem_data.hex";
-    if ($value$plusargs("imem=%s", mem_file)) begin
-      $readmemh(mem_file, dut.u_mem_imem.ram);
-      $display("Loaded instruction memory from %s", mem_file);
-    end
 
-    // Load data memory if specified
-    mem_file = "/home/hidemi/kairo/software/dmem_data.hex";
-    if ($value$plusargs("dmem=%s", mem_file)) begin
-      $readmemh(mem_file, dut.u_mem_dmem.ram);
-      $display("Loaded data memory from %s", mem_file);
-    end
-  end
-*/
+  assign GPIO0_I = (GPIO0_OE) ? GPIO0_O : 32'hZZZZZZZZ;
+  assign GPIO1_I = (GPIO1_OE) ? GPIO1_O : 32'hZZZZZZZZ;
+
   // Dump waveform
   initial begin
     if ($test$plusargs("wave")) begin
@@ -102,8 +88,6 @@ module tb_kairo_soc;
     // Initialize signals
     RST_N = 1'b0;
     INTERRUPT = 1'b0;
-    GPIO0_I = 32'h0;
-    GPIO1_I = 32'h0;
     TRST_N = 1'b0;
     TMS = 1'b0;
     TDI = 1'b0;
@@ -122,17 +106,8 @@ module tb_kairo_soc;
     // Wait for boot sequence
     #1000;
 
-    // Run basic tests
-    if ($test$plusargs("test_gpio")) begin
-      test_gpio();
-    end
-
     if ($test$plusargs("test_interrupt")) begin
       test_interrupt();
-    end
-
-    if ($test$plusargs("test_jtag")) begin
-      test_jtag();
     end
 
     // Wait for program completion
@@ -141,35 +116,6 @@ module tb_kairo_soc;
     $display("Simulation completed successfully at %t", $time);
     $finish(0);
   end
-
-  // Test tasks
-  task test_gpio;
-    begin
-      $display("Starting GPIO test at %t", $time);
-
-      // Test GPIO0 input
-      GPIO0_I = 32'hA5A5_5A5A;
-      #100;
-
-      // Test GPIO1 input
-      GPIO1_I = 32'h5A5A_A5A5;
-      #100;
-
-      // Monitor GPIO outputs
-      repeat (10) begin
-        @(posedge CLK);
-        if (GPIO0_OE != 0) begin
-          $display("GPIO0 output: 0x%08x (OE: 0x%08x)", GPIO0_O, GPIO0_OE);
-        end
-        if (GPIO1_OE != 0) begin
-          $display("GPIO1 output: 0x%08x (OE: 0x%08x)", GPIO1_O, GPIO1_OE);
-        end
-      end
-
-      GPIO0_I = 32'h0;
-      GPIO1_I = 32'h0;
-    end
-  endtask
 
   task test_interrupt;
     begin
@@ -192,23 +138,6 @@ module tb_kairo_soc;
         INTERRUPT = 1'b0;
         #500;
       end
-    end
-  endtask
-
-  task test_jtag;
-    begin
-      $display("Starting JTAG test at %t", $time);
-
-      // Simple JTAG sequence (TAP reset)
-      repeat (5) begin
-        @(posedge TCK);
-        TMS = 1'b1;
-      end
-
-      @(posedge TCK);
-      TMS = 1'b0;
-
-      // Additional JTAG operations can be added here
     end
   endtask
 

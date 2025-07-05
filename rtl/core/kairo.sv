@@ -153,10 +153,14 @@ module kairo #(
   wire        wb_pc_we;
   wire [31:0] wb_pc;
   reg  [ 0:0] tasknum;
+  reg         task_exec;
+  wire        fetch_valid;
+  wire [31:0] fetch_data;
 
   always @(posedge CLK) begin
     if (!RST_N) begin
       tasknum <= 0;
+      task_exec <= 0;
       pc <= START_ADDR;
       bootcnt <= 0;
     end else begin
@@ -166,36 +170,41 @@ module kairo #(
         1'b0: pc <= BOOT_ADDR;
         default: if (wb_pc_we) pc <= wb_pc;
       endcase
+      task_exec <= fetch_valid;
     end
   end
-
-  wire [31:0] fetch_data;
 
   // current PC
   always @(posedge CLK) begin
     if (!RST_N) begin
       current_pc <= START_ADDR;
     end else begin
-      if (ex_cansel) begin
-        current_pc <= exception_pc;
-      end else if (!ex_wait) begin
-        current_pc <= pc;
-      end
+      //      if (ex_cansel) begin
+      //        current_pc <= exception_pc;
+      //      end else if (!ex_wait) begin
+      //      end else begin
+      current_pc <= pc;
+      //      end
     end
   end
 
+  assign fetch_valid = I_MEM_READY;
   assign fetch_data  = ((I_MEM_READY) ? I_MEM_RDATA : 32'h0000_0013);  // NOP
 
   //////////////////////////////////////////////////////////////////////
   // IF:Instruction Fetch
   //////////////////////////////////////////////////////////////////////
-  assign I_MEM_VALID = cpu_exec & ~ex_cansel;
-  assign I_MEM_ADDR  = (ex_wait) ? current_pc : pc;
+  //  assign I_MEM_VALID = cpu_exec & ~ex_cansel;
+  assign I_MEM_VALID = cpu_exec;
+  //  assign I_MEM_ADDR  = (ex_wait) ? current_pc : pc;
+  assign I_MEM_ADDR  = pc;
 
   //////////////////////////////////////////////////////////////////////
   // ID:Instruction Decode
   //////////////////////////////////////////////////////////////////////
   kairo_decode u_kairo_decode (
+      .RST_N    (RST_N),
+      .CLK      (CLK),
       // インストラクションコード
       .INST_CODE(fetch_data),
       .RS1_NUM  (id_rs1_num),
@@ -268,7 +277,7 @@ module kairo #(
       .ILL_INST(id_ill_inst_raw)
   );
 
-  assign id_ill_inst = id_ill_inst_raw & cpu_exec;
+  assign id_ill_inst = id_ill_inst_raw & fetch_valid;
 
   //////////////////////////////////////////////////////////////////////
   // EX:Excute
@@ -345,10 +354,10 @@ module kairo #(
       .RST_N      (RST_N),
       .CLK        (CLK),
       //Code
-      .INST_MUL   (id_inst_mul & cpu_exec),
-      .INST_MULH  (id_inst_mulh & cpu_exec),
-      .INST_MULHSU(id_inst_mulhsu & cpu_exec),
-      .INST_MULHU (id_inst_mulhu & cpu_exec),
+      .INST_MUL   (id_inst_mul & fetch_valid),
+      .INST_MULH  (id_inst_mulh & fetch_valid),
+      .INST_MULHSU(id_inst_mulhsu & fetch_valid),
+      .INST_MULHU (id_inst_mulhu & fetch_valid),
       // Input
       .RS1        (id_rs1),
       .RS2        (id_rs2),
@@ -361,10 +370,10 @@ module kairo #(
       .RST_N(RST_N),
       .CLK  (CLK),
 
-      .INST_DIV (id_inst_div & cpu_exec),
-      .INST_DIVU(id_inst_divu & cpu_exec),
-      .INST_REM (id_inst_rem & cpu_exec),
-      .INST_REMU(id_inst_remu & cpu_exec),
+      .INST_DIV (id_inst_div & fetch_valid),
+      .INST_DIVU(id_inst_divu & fetch_valid),
+      .INST_REM (id_inst_rem & fetch_valid),
+      .INST_REMU(id_inst_remu & fetch_valid),
 
       .RS1(id_rs1),
       .RS2(id_rs2),
@@ -378,70 +387,65 @@ module kairo #(
 
   assign ex_wait = ex_mul_wait | ex_div_wait | (D_MEM_VALID & ~D_MEM_READY);
 
-  reg [ 0:0] ex_tasknum;
-  reg [31:0] ex_pc_inc;
-  reg [11:0] ex_csr_addr;
-  reg        ex_csr_we;
-  reg [31:0] ex_csr_wdata;
-  reg [31:0] ex_csr_wmask;
-  reg [31:0] ex_rs2, ex_imm;
-  reg [4:0] ex_rd_num;
-  reg ex_inst_sb, ex_inst_sh, ex_inst_sw;
-  reg ex_inst_lbu, ex_inst_lhu, ex_inst_lb, ex_inst_lh, ex_inst_lw;
-  reg ex_inst_lui, is_ex_load, ex_inst_auipc, ex_inst_jal, ex_inst_jalr;
-  reg ex_inst_mret;
-  reg ex_inst_ecall;
-  reg ex_inst_ebreak;
-  reg is_ex_csr;
-  reg is_ex_mul, is_ex_div;
+  reg  [ 0:0] ex_tasknum;
+  wire [31:0] ex_pc_inc;
+  wire [11:0] ex_csr_addr;
+  wire        ex_csr_we;
+  wire [31:0] ex_csr_wdata;
+  wire [31:0] ex_csr_wmask;
+  wire [31:0] ex_rs2, ex_imm;
+  wire [4:0] ex_rd_num;
+  wire ex_inst_sb, ex_inst_sh, ex_inst_sw;
+  wire ex_inst_lbu, ex_inst_lhu, ex_inst_lb, ex_inst_lh, ex_inst_lw;
+  wire ex_inst_lui, is_ex_load, ex_inst_auipc, ex_inst_jal, ex_inst_jalr;
+  wire ex_inst_mret;
+  wire ex_inst_ecall;
+  wire ex_inst_ebreak;
+  wire is_ex_csr;
+  wire is_ex_mul, is_ex_div;
 
   always @(posedge CLK) begin
-    if (!RST_N) begin
-      ex_csr_we <= 1'b0;
-      ex_pc_inc <= BOOT_ADDR;
-    end else begin
-      ex_tasknum <= tasknum;
-      ex_pc_inc <= pc + 4;
+    ex_tasknum <= tasknum;
+  end
+  assign ex_pc_inc = current_pc + 4;
 
-      ex_csr_addr <= id_imm[11:0];
-      ex_csr_we    <= cpu_exec & 
+  assign ex_csr_addr = id_imm[11:0];
+  assign ex_csr_we    = fetch_valid & 
                         ((id_inst_csrrw | id_inst_csrrs | id_inst_csrrc) |
                         ((id_inst_csrrwi | id_inst_csrrsi | id_inst_csrrci) &
                         (id_rs1_num == 5'd0)));
-      ex_csr_wdata <= ((id_inst_csrrw)?id_rs1:32'd0) |
+  assign ex_csr_wdata = ((id_inst_csrrw)?id_rs1:32'd0) |
                         ((id_inst_csrrs)?id_rs1:32'd0) |
                         ((id_inst_csrrc | id_inst_csrrci)?32'd0:32'd0) |
                         ((id_inst_csrrwi | id_inst_csrrsi)?(32'b1 << id_rs1_num):32'd0) |
                         32'd0;
-      ex_csr_wmask <= ((id_inst_csrrw)?32'hffff_ffff:32'd0) |
+  assign ex_csr_wmask = ((id_inst_csrrw)?32'hffff_ffff:32'd0) |
                         ((id_inst_csrrs | id_inst_csrrc)?id_rs1:32'd0) |
                         ((id_inst_csrrwi | id_inst_csrrsi | id_inst_csrrci)?~(32'b1 << id_rs1_num):32'd0) |
                         32'd0;
 
-      ex_rs2 <= id_rs2;
-      ex_imm <= id_imm;
-      ex_rd_num <= id_rd_num;
-      ex_inst_sb <= id_inst_sb;
-      ex_inst_sh <= id_inst_sh;
-      ex_inst_sw <= id_inst_sw;
-      ex_inst_lbu <= id_inst_lbu;
-      ex_inst_lhu <= id_inst_lhu;
-      ex_inst_lb <= id_inst_lb;
-      ex_inst_lh <= id_inst_lh;
-      ex_inst_lw <= id_inst_lw;
-      is_ex_load <= id_inst_lb | id_inst_lh | id_inst_lw | id_inst_lbu | id_inst_lhu;
-      ex_inst_lui <= id_inst_lui;
-      ex_inst_auipc <= id_inst_auipc;
-      ex_inst_jal <= id_inst_jal;
-      ex_inst_jalr <= id_inst_jalr;
-      is_ex_csr <= id_inst_csrrw | id_inst_csrrs | id_inst_csrrc | id_inst_csrrwi | id_inst_csrrsi | id_inst_csrrci;
-      ex_inst_mret <= id_inst_mret;
-      ex_inst_ecall <= id_inst_ecall;
-      ex_inst_ebreak <= id_inst_ebreak;
-      is_ex_mul <= id_inst_mul | id_inst_mulh | id_inst_mulhsu | id_inst_mulhu;
-      is_ex_div <= id_inst_div | id_inst_divu | id_inst_rem | id_inst_remu;
-    end
-  end
+  assign ex_rs2 = id_rs2;
+  assign ex_imm = id_imm;
+  assign ex_rd_num = id_rd_num;
+  assign ex_inst_sb = id_inst_sb;
+  assign ex_inst_sh = id_inst_sh;
+  assign ex_inst_sw = id_inst_sw;
+  assign ex_inst_lbu = id_inst_lbu;
+  assign ex_inst_lhu = id_inst_lhu;
+  assign ex_inst_lb = id_inst_lb;
+  assign ex_inst_lh = id_inst_lh;
+  assign ex_inst_lw = id_inst_lw;
+  assign is_ex_load = id_inst_lb | id_inst_lh | id_inst_lw | id_inst_lbu | id_inst_lhu;
+  assign ex_inst_lui = id_inst_lui;
+  assign ex_inst_auipc = id_inst_auipc;
+  assign ex_inst_jal = id_inst_jal;
+  assign ex_inst_jalr = id_inst_jalr;
+  assign is_ex_csr = id_inst_csrrw | id_inst_csrrs | id_inst_csrrc | id_inst_csrrwi | id_inst_csrrsi | id_inst_csrrci;
+  assign ex_inst_mret = id_inst_mret;
+  assign ex_inst_ecall = id_inst_ecall;
+  assign ex_inst_ebreak = id_inst_ebreak;
+  assign is_ex_mul = id_inst_mul | id_inst_mulh | id_inst_mulhsu | id_inst_mulhu;
+  assign is_ex_div = id_inst_div | id_inst_divu | id_inst_rem | id_inst_remu;
 
   //////////////////////////////////////////////////////////////////////
   // MA:Memory Access
@@ -464,7 +468,7 @@ module kairo #(
   assign D_MEM_WSTB[3] = (ex_inst_sb & (ex_alu_rslt_a[1:0] == 2'b11)) |
                           (ex_inst_sh & (ex_alu_rslt_a[1] == 1'b1)) |
                           (ex_inst_sw);
-  assign D_MEM_VALID   = cpu_exec &
+  assign D_MEM_VALID   = fetch_valid &
                             (ex_inst_sb | ex_inst_sh | ex_inst_sw |
                             ex_inst_lbu | ex_inst_lb |
                             ex_inst_lb | ex_inst_lh | ex_inst_lhu | ex_inst_lw);
@@ -514,14 +518,15 @@ module kairo #(
   wire [31:0] ex_csr_rdata;
 
   assign wb_rd_num = ex_rd_num;
-  assign wb_we = (cpu_exec & ~(ex_wait | ex_inst_ebreak));
-  assign wb_rd      = ((is_ex_load)?ex_load:32'd0) |
-                      ((is_ex_rslt)?ex_rslt:32'd0) |
-                      ((ex_inst_lui)?ex_imm:32'd0) |
-                      ((ex_inst_auipc)?ex_alu_rslt_a:32'd0) |
-                      (((ex_inst_jal | ex_inst_jalr)?pc:32'd0)) |
-                      ((is_ex_csr)?ex_csr_rdata:32'd0) |
-                      32'd0;
+  //  assign wb_we = (task_exec & ~(ex_wait | ex_inst_ebreak));
+  assign wb_we     = task_exec & (is_ex_load | is_ex_rslt | ex_inst_lui | ex_inst_auipc | ex_inst_jal | ex_inst_jalr | is_ex_csr);
+  assign wb_rd     = ((is_ex_load)?ex_load:32'd0) |
+                     ((is_ex_rslt)?ex_rslt:32'd0) |
+                     ((ex_inst_lui)?ex_imm:32'd0) |
+                     ((ex_inst_auipc)?ex_alu_rslt_a:32'd0) |
+                     (((ex_inst_jal | ex_inst_jalr)?pc:32'd0)) |
+                     ((is_ex_csr)?ex_csr_rdata:32'd0) |
+                     32'd0;
 
   wire        interrupt;
   wire [31:0] epc;
@@ -538,7 +543,7 @@ module kairo #(
     if (!RST_N) begin
       r_ext_int <= 1'b0;
     end else begin
-      if (!haltreq_d & !cpu_exec) r_ext_int <= interrupt;
+      if (!haltreq_d & !task_exec) r_ext_int <= interrupt;
     end
   end
 
@@ -547,29 +552,30 @@ module kairo #(
   assign detect_ebreak = ex_inst_ebreak | haltreq_d;
   assign detect_branch = ex_alu_rslt_b | ex_inst_jal | ex_inst_jalr;
 
-  assign exception_break = cpu_exec & ex_inst_ebreak;
-  assign exception = cpu_exec & (~r_ext_int & interrupt);
+  assign exception_break = task_exec & ex_inst_ebreak;
+  assign exception = task_exec & (~r_ext_int & interrupt);
   assign exception_code   =   (D_MEM_EXCPT)?12'd4:
                             | (exception_break)?12'd3:
                             | (id_ill_inst)?12'd2:
                             | (I_MEM_EXCPT)?12'd0:0;
   assign exception_addr = current_pc;
-  assign exception_pc     = (detect_exception | interrupt | (cpu_exec & detect_ebreak))?current_pc:
-                            (cpu_exec & ex_inst_mret)?epc:
-                            (cpu_exec & detect_branch)?ex_alu_rslt_a:
-      (~(detect_exception | interrupt | (cpu_exec & (detect_ebreak | ex_inst_mret | detect_branch | ex_inst_jalr))))?current_pc:
-                            32'd0;
+  assign exception_pc     = (detect_exception | interrupt | (task_exec & detect_ebreak))?current_pc:
+                            (task_exec & ex_inst_mret)?epc:
+                            (task_exec & detect_branch)?ex_alu_rslt_a:
+      (task_exec & ~(detect_exception | interrupt | (task_exec & (detect_ebreak | ex_inst_mret | detect_branch | ex_inst_jalr))))?current_pc:
+                            current_pc;
 
-  assign sw_interrupt = cpu_exec & ex_inst_ecall;
+  assign sw_interrupt = task_exec & ex_inst_ecall;
   assign sw_interrupt_pc = current_pc;
 
-  assign wb_pc_we = (cpu_exec & !ex_wait) | (detect_exception);
+  //  assign wb_pc_we = (task_exec & !ex_wait) | (detect_exception);
+  assign wb_pc_we = cpu_exec;
   assign wb_pc    = (detect_exception)?handler_pc:
-                    (cpu_exec & detect_ebreak)?current_pc:
-                    (cpu_exec & ex_inst_mret)?epc:
-                    (cpu_exec & detect_branch)?ex_alu_rslt_a:
-                    (~(detect_exception | (cpu_exec & (detect_ebreak | ex_inst_mret | detect_branch | ex_inst_jalr))))?ex_pc_inc:
-                     32'd0;
+                    (task_exec & detect_ebreak)?current_pc:
+                    (task_exec & ex_inst_mret)?epc:
+                    (task_exec & detect_branch)?ex_alu_rslt_a:
+                    (task_exec & ~(detect_exception | (task_exec & (detect_ebreak | ex_inst_mret | detect_branch | ex_inst_jalr))))?ex_pc_inc:
+                     current_pc;
   assign ex_cansel = (detect_branch | ex_inst_jal | ex_inst_jalr | ex_inst_mret | detect_exception);
 
   //////////////////////////////////////////////////////////////////////

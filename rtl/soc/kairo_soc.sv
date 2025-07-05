@@ -19,6 +19,11 @@ module kairo_soc (
     input  wire        TDI,
     output wire        TDO
 );
+  // Clock
+  wire clk1, clk2;
+  assign clk1 = CLK;
+  assign clk2 = ~CLK;
+
   wire        ext_interrupt;
   wire        ext_expired;
   wire        ext_softint;
@@ -172,7 +177,7 @@ module kairo_soc (
   // CPU Core
   kairo u_kairo (
       .RST_N         (internal_reset_n),
-      .CLK           (CLK),
+      .CLK           (clk2),
       .D_MEM_ADDR    (w_d_mem_bus_mem_addr),
       .D_MEM_VALID   (w_d_mem_bus_mem_valid),
       .D_MEM_RDATA   (w_d_mem_bus_mem_rdata),
@@ -263,6 +268,8 @@ module kairo_soc (
   assign debug_mem_ready = w_debug_mem_ready_i | w_debug_mem_ready_d;
 
   kairo_lct u_kairo_lct (
+      .RST_N       (internal_reset_n),
+      .CLK         (clk1),
       .S_APB_ADDR  (d_mem_bus_mem_addr),
       .S_APB_VALID (d_mem_bus_mem_valid),
       .S_APB_RDATA (d_mem_bus_mem_rdata),
@@ -311,7 +318,7 @@ module kairo_soc (
 
   kairo_mif u_kairo_mif (
       .RST_N      (internal_reset_n),
-      .CLK        (CLK),
+      .CLK        (clk1),
       .I_MEM_ADDR (i_mem_bus_mem_addr),
       .I_MEM_VALID(i_mem_bus_mem_valid),
       .I_MEM_RDATA(i_mem_bus_mem_rdata),
@@ -343,11 +350,11 @@ module kairo_soc (
       .AWIDTH  (16),
       .MEM_FILE("/home/hidemi/kairo/software/imem_data.hex")
   ) u_mem_imem (
-      .WCK(CLK),
+      .WCK(clk1),
       .WAD(imem_waddr[15:0]),
       .WEB(imem_web),
       .WDI(imem_wdata),
-      .RCK(CLK),
+      .RCK(clk1),
       .RAD(imem_raddr[15:0]),
       .RDO(imem_rdata)
   );
@@ -356,11 +363,11 @@ module kairo_soc (
       .AWIDTH  (16),
       .MEM_FILE("/home/hidemi/kairo/software/dmem_data.hex")
   ) u_mem_dmem (
-      .WCK(CLK),
+      .WCK(clk2),
       .WAD(dmem_waddr[15:0]),
       .WEB(dmem_web),
       .WDI(dmem_wdata),
-      .RCK(CLK),
+      .RCK(clk1),
       .RAD(dmem_raddr[15:0]),
       .RDO(dmem_rdata)
   );
@@ -368,7 +375,7 @@ module kairo_soc (
   // Base: 0x8000_0000
   apb_plic u_apb_plic (
       .RST_N        (internal_reset_n),
-      .CLK          (CLK),
+      .CLK          (clk1),
       .S_APB_PSEL   (m0_apb_valid),
       .S_APB_PENABLE(m0_apb_valid),
       .S_APB_PWRITE (|m0_apb_wstb),
@@ -383,7 +390,7 @@ module kairo_soc (
   // Base: 0x8001_0000
   apb_timer u_apb_timer (
       .RST_N        (internal_reset_n),
-      .CLK          (CLK),
+      .CLK          (clk1),
       .S_APB_PSEL   (m1_apb_valid),
       .S_APB_PENABLE(m1_apb_valid),
       .S_APB_PWRITE (|m1_apb_wstb),
@@ -397,7 +404,7 @@ module kairo_soc (
   // Base: 0x8002_0000
   apb_gpio u_apb_gpio0 (
       .RST_N        (internal_reset_n),
-      .CLK          (CLK),
+      .CLK          (clk1),
       .S_APB_PSEL   (m2_apb_valid),
       .S_APB_PENABLE(m2_apb_valid),
       .S_APB_PWRITE (|m2_apb_wstb),
@@ -413,7 +420,7 @@ module kairo_soc (
   // Base: 0x8003_0000
   apb_gpio u_apb_gpio1 (
       .RST_N        (internal_reset_n),
-      .CLK          (CLK),
+      .CLK          (clk1),
       .S_APB_PSEL   (m3_apb_valid),
       .S_APB_PENABLE(m3_apb_valid),
       .S_APB_PWRITE (|m3_apb_wstb),
@@ -441,7 +448,7 @@ module kairo_soc (
       .O_HARTRESET     (core_reset),
       .O_NDMRESET      (ndmreset),
       .SYS_RST_N       (debug_rst_n),
-      .SYS_CLK         (CLK),
+      .SYS_CLK         (clk2),
       .DEBUG_AR_EN     (debug_ar_en),
       .DEBUG_AR_WR     (debug_ar_wr),
       .DEBUG_AR_AD     (debug_ar_ad),

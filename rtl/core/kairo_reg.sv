@@ -36,7 +36,7 @@ module kairo_reg (
   assign r2_addr = {RTASKNUM, RS2ADDR};
 
   always @(posedge CLK) begin
-    r1_zero <= (r1_addr == 0);
+    r1_zero <= (RS1ADDR == 0);
     r2_zero <= (RS2ADDR == 0);
   end
 

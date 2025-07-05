@@ -82,7 +82,11 @@ module kairo_mif (
   // delay for ready
   reg d_valid_d;
   always @(posedge CLK) begin
-    d_valid_d <= D_MEM_VALID;
+    if (!RST_N) begin
+      d_valid_d <= 1'b0;
+    end else begin
+      d_valid_d <= D_MEM_VALID;
+    end
   end
   assign dmem_wr = (sel_data)?D_MEM_WSTB[3] | D_MEM_WSTB[2] | D_MEM_WSTB[1] | D_MEM_WSTB[0] : 1'b0;
   assign dmem_st = (sel_data) ? {D_MEM_WSTB[3], D_MEM_WSTB[2], D_MEM_WSTB[1], D_MEM_WSTB[0]} : 4'd0;

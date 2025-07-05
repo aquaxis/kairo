@@ -72,28 +72,27 @@ module kairo_alu (
   wire [31:0] alu_xor, alu_or, alu_and;
   wire alu_eq, alu_ltu, alu_lts;
 
-  assign alu_add  = reg_op1 + reg_op2;
-  assign alu_sub  = RS1 - reg_op2;
-  assign alu_shl  = RS1 << reg_op2[4:0];
-  assign alu_shr  = $signed({1'b0, RS1}) >>> reg_op2[4:0];
+  assign alu_add = reg_op1 + reg_op2;
+  assign alu_sub = RS1 - reg_op2;
+  assign alu_shl = RS1 << reg_op2[4:0];
+  assign alu_shr = $signed({1'b0, RS1}) >>> reg_op2[4:0];
   assign alu_shra = $signed({RS1[31], RS1}) >>> reg_op2[4:0];
-  assign alu_xor  = RS1 ^ reg_op2;
-  assign alu_or   = RS1 | reg_op2;
-  assign alu_and  = RS1 & reg_op2;
-  assign alu_eq   = (RS1 == RS2);
-  assign alu_lts  = ($signed(RS1) < $signed(RS2));
-  assign alu_ltu  = (RS1 < RS2);
+  assign alu_xor = RS1 ^ reg_op2;
+  assign alu_or = RS1 | reg_op2;
+  assign alu_and = RS1 & reg_op2;
+  assign alu_eq = (RS1 == RS2);
+  assign alu_lts = ($signed(RS1) < $signed(RS2));
+  assign alu_ltu = (RS1 < RS2);
 
-  always @(posedge CLK) begin
-    RSLT_A <= alu_add;
-    RSLT_B <= ((INST_BEQ)?alu_eq:1'd0) |
+  assign RSLT_A = alu_add;
+  assign RSLT_B = ((INST_BEQ)?alu_eq:1'd0) |
                   ((INST_BNE)?!alu_eq:1'd0) |
                   ((INST_BGE)?!alu_lts:1'd0) |
                   ((INST_BGEU)?!alu_ltu:1'd0) |
                   ((INST_BLT)?alu_lts:1'd0) |
                   ((INST_BLTU)?alu_ltu:1'd0) |
                   1'd0;
-    RSLT <= ((INST_ADDI | INST_ADD | INST_LB | INST_LH | INST_LW | INST_LBU | INST_LHU | INST_SB | INST_SH | INST_SW)?alu_add:32'd0) | 
+  assign RSLT = ((INST_ADDI | INST_ADD | INST_LB | INST_LH | INST_LW | INST_LBU | INST_LHU | INST_SB | INST_SH | INST_SW)?alu_add:32'd0) | 
                 ((INST_SUB)?alu_sub:32'd0) |
                 ((INST_SLTI | INST_SLT)?{31'd0, alu_lts}:32'd0) |
                 ((INST_SLTIU | INST_SLTU)?{31'd0, alu_ltu}:32'd0) |
@@ -104,8 +103,7 @@ module kairo_alu (
                 ((INST_ORI | INST_OR)?alu_or:32'd0) |
                 ((INST_ANDI | INST_AND)?alu_and:32'd0) |
                 32'd0;
-    RSLT_VALID <= INST_ADDI | INST_ADD | INST_SUB |
-                      INST_LB | INST_LH | INST_LW | INST_LBU | INST_LHU |
+  assign RSLT_VALID = INST_ADDI | INST_ADD | INST_SUB |
                       INST_SB | INST_SH | INST_SW |
                       INST_SLTI | INST_SLT | INST_SLTIU | INST_SLTU |
                       INST_SLLI | INST_SLL |
@@ -113,7 +111,8 @@ module kairo_alu (
                       INST_XORI | INST_XOR |
                       INST_ORI | INST_OR |
                       INST_ANDI | INST_AND;
-  end
+
+  //                      INST_LB | INST_LH | INST_LW | INST_LBU | INST_LHU |
 
 endmodule
 `default_nettype wire
