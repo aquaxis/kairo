@@ -21,7 +21,6 @@ module kairo_csr (
     output wire [31:0] EPC,
     output wire        INTERRUPT_PENDING,
     output wire        INTERRUPT,
-    output wire        ILLEGAL_ACCESS,
     input  wire [31:0] DPC,
     input  wire        RESUMEREQ,
     input  wire        EBREAK,
