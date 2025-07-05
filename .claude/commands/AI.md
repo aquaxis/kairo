@@ -1,0 +1,2 @@
+@AI_RULES.md
+@AI_INSTRUCTIONS.md

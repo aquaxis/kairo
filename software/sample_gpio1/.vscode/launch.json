@@ -1,0 +1,39 @@
+{
+    // IntelliSense を使用して利用可能な属性を学べます。
+    // 既存の属性の説明をホバーして表示します。
+    // 詳細情報は次を確認してください: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/sample_gpio",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+//            "debugServerArgs": "-d --log_output /tmp/debug.log -f ${workspaceFolder}/riscv.cfg -c init -c \"reset init\" -c halt",
+            "debugServerArgs": "-d --log_output /tmp/debug.log -f ${workspaceFolder}/riscv.cfg",
+            "serverLaunchTimeout": 20000,
+            "filterStderr": true,
+            "filterStdout": false,
+//            "logging": { "engineLogging": true },
+            "setupCommands": [
+                { "text": "set arch riscv:rv32", "description": "set architecture", "ignoreFailures": false },
+                { "text": "-target-select remote localhost:3333", "description": "connect to target", "ignoreFailures": false },
+                { "text": "-file-exec-and-symbols ${workspaceFolder}/sample_gpio", "description": "load file", "ignoreFailures": false},
+                { "text": "-interpreter-exec console \"monitor reset halt\"", "ignoreFailures": false },
+                { "text": "handle SIGTRAP nostop noprint", "ignoreFailures": false },
+                { "text": "-interpreter-exec console \"load\"", "ignoreFailures": false },
+                { "text": "set $pc = 0x0",  },
+            ],
+            "linux": {
+                "MIMode": "gdb",
+                "MIDebuggerPath": "/opt/riscv32im_2024/bin/riscv32-unknown-elf-gdb",
+                "debugServerPath": "openocd"
+            },
+        }
+    ]
+}
